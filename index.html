@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kleptography: Breaking Trust in Cryptography</title>
+<style>
+body{font-family:Arial,sans-serif;background:#0e1420;color:#e8edf5;margin:0}
+header{background:#111a2b;padding:18px 24px;border-bottom:1px solid #23324a}
+h1{margin:0;font-size:22px}
+.subtitle{color:#8fa3bf;font-size:14px;margin-top:4px}
+main{max-width:1100px;margin:20px auto;padding:0 16px}
+.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+button.tab{background:#1a2537;color:#cfe0f5;border:1px solid #2c3d59;padding:10px 14px;border-radius:8px;cursor:pointer}
+button.tab.active{background:#2f6fed;color:#fff}
+.card{background:#141d2e;border:1px solid #24344e;border-radius:12px;padding:18px;margin-bottom:16px}
+h2{margin-top:0;font-size:18px}
+label{display:block;margin:10px 0 4px;font-size:13px;color:#a9bcd6}
+input{width:100%;box-sizing:border-box;background:#0d1420;color:#e8edf5;border:1px solid #2c3d59;border-radius:8px;padding:9px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>div{flex:1;min-width:220px}
+button.action{background:#2f6fed;border:none;color:#fff;padding:10px 14px;border-radius:8px;cursor:pointer;margin-top:10px}
+button.gray{background:#33465f}
+button.red{background:#c0392b}
+button.green{background:#1e8e4f}
+pre{background:#0b111c;border:1px solid #24344e;padding:12px;border-radius:8px;overflow:auto;font-size:12px;white-space:pre-wrap}
+.small{font-size:12px;color:#8fa3bf}
+.warning{color:#ffb84d;font-size:13px}
+.hidden{display:none}
+iframe{width:100%;height:430px;border:1px solid #2c3d59;border-radius:8px;margin-top:12px;background:#fff}
+.status{color:#7fd1a8;font-size:13px;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+<h1>Kleptography: Breaking Trust in Cryptography</h1>
+<div class="subtitle">Interactive RSA backdoor and simulated TLS MITM demo — client-side educational simulation</div>
+</header>
+<main>
+<div class="tabs">
+<button class="tab active" onclick="showTab('ca',this)">1. Evil CA</button>
+<button class="tab" onclick="showTab('victim',this)">2. Victim Server</button>
+<button class="tab" onclick="showTab('user',this)">3. User Browser</button>
+<button class="tab" onclick="showTab('attacker',this)">4. MITM / Attacker</button>
+<button class="tab" onclick="showTab('log',this)">Activity Log</button>
+</div>
+
+<div id="ca" class="card">
+<h2>Evil Certificate Authority</h2>
+<p class="small">The attacker chooses a secret master passphrase. A backdoored RSA key is generated deterministically from that secret, the victim domain, and a nonce published in the certificate.</p>
+<label>Victim domain</label>
+<input id="domain" value="victim-site.com">
+<label>Attacker master passphrase</label>
+<input id="master" value="attacker-master-secret">
+<div class="row">
+<div><button class="action red" onclick="generateCertificate(false)">Generate backdoored key + certificate</button></div>
+<div><button class="action gray" onclick="generateCertificate(true)">Generate honest key for comparison</button></div>
+</div>
+<div id="ca_status" class="status"></div>
+<pre id="ca_output">No certificate issued yet.</pre>
+</div>
+
+<div id="victim" class="card hidden">
+<h2>Victim Web Server</h2>
+<p class="small">The victim deploys the certificate and private key. Nothing visible reveals that the key generator was malicious.</p>
+<button class="action green" onclick="deployVictim()">Deploy victim-site.com</button>
+<pre id="victim_output">No deployment yet.</pre>
+</div>
+
+<div id="user" class="card hidden">
+<h2>User Browser</h2>
+<p class="small">Visit the site and submit a secret. When MITM is enabled, the attacker’s cloned page is served instead.</p>
+<div class="row">
+<div><button class="action" onclick="visitSite()">Visit https://victim-site.com</button></div>
+<div>
+<button class="action gray" onclick="setMitm(true)">Enable MITM</button>
+<button class="action gray" onclick="setMitm(false)">Disable MITM</button>
+</div>
+</div>
+<iframe id="site_frame" src="about:blank"></iframe>
+<label>Secret to submit over the connection</label>
+<input id="secret" value="Bank password: correct-horse-battery">
+<button class="action" onclick="submitSecret()">Submit encrypted secret</button>
+<pre id="user_output">No secret submitted yet.</pre>
+</div>
+
+<div id="attacker" class="card hidden">
+<h2>MITM / Attacker Recovery</h2>
+<p class="small">Clone the victim site, capture encrypted submissions, then recover the RSA private key using only the public certificate nonce and the attacker master passphrase.</p>
+<button class="action gray" onclick="cloneSite()">Clone victim-site.com</button>
+<label>Master passphrase for recovery</label>
+<input id="recover_master" value="attacker-master-secret">
+<button class="action red" onclick="recoverKey()">Recover victim private key</button>
+<pre id="attacker_output">No attacker action yet.</pre>
+</div>
+
+<div id="log" class="card hidden">
+<h2>Activity Log</h2>
+<pre id="log_output">No activity yet.</pre>
+</div>
+
+<div class="card">
+<h2>Security notice</h2>
+<p class="warning">This is a client-side educational simulation. It does not perform ARP poisoning, real TLS interception, or attacks against systems you do not own.</p>
+</div>
+</main>
+
+<script>
+const RSA_BITS=512;
+const PUBLIC_EXPONENT=65537n;
+let state={victim:null,cloneLive:false,mitm:false,captured:[],log:[]};
+
+function showTab(id,btn){
+document.querySelectorAll(".card").forEach(c=>c.classList.add("hidden"));
+document.getElementById(id).classList.remove("hidden");
+document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+btn.classList.add("active");
+if(id==="log")refreshLog();
+}
+function inputValue(id){return document.getElementById(id).value}
+function showOutput(id,text){document.getElementById(id).textContent=text}
+function addLog(m){state.log.unshift(m);state.log=state.log.slice(0,80);refreshLog()}
+function refreshLog(){document.getElementById("log_output").textContent=state.log.join("\n")}
+function bytesToHex(b){return Array.from(b).map(x=>x.toString(16).padStart(2,"0")).join("")}
+function hexToBytes(h){const b=new Uint8Array(h.length/2);for(let i=0;i<b.length;i++)b[i]=parseInt(h.substr(i*2,2),16);return b}
+function bytesToBigInt(b){return BigInt("0x"+bytesToHex(b))}
+function bigIntToBytes(v,len){const h=v.toString(16).padStart(len*2,"0");const b=new Uint8Array(len);for(let i=0;i<len;i++)b[i]=parseInt(h.substr(i*2,2),16);return b}
+async function sha256Bytes(d){const r=await crypto.subtle.digest("SHA-256",d);return new Uint8Array(r)}
+async function hmacSha256(key,msg){const enc=new TextEncoder();const k=await crypto.subtle.importKey("raw",enc.encode(key),{name:"HMAC",hash:"SHA-256"},false,["sign"]);const s=await crypto.subtle.sign("HMAC",k,msg);return new Uint8Array(s)}
+async function createDrng(seed){let c=0;return async function(){const cb=new Uint8Array(8);new DataView(cb.buffer).setBigUint64(0,BigInt(c),false);c++;const inp=new Uint8Array(seed.length+8);inp.set(seed,0);inp.set(cb,seed.length);return await sha256Bytes(inp)}}
+function modPow(b,e,m){if(m===1n)return 0n;let r=1n;b=b%m;while(e>0n){if(e&1n)r=(r*b)%m;b=(b*b)%m;e>>=1n}return r}
+function modInverse(a,m){let[or,r]=[a%m,m];let[os,s]=[1n,0n];while(r!==0n){const q=or/r;[or,r]=[r,or-q*r];[os,s]=[s,os-q*s]}if(or!==1n)throw new Error("Modular inverse does not exist.");return((os%m)+m)%m}
+function gcd(a,b){while(b!==0n){[a,b]=[b,a%b]}return a}
+function isProbablePrime(n){
+if(n<2n)return false;
+for(const p of[2n,3n,5n,7n,11n,13n,17n,19n,23n,29n,31n,37n]){if(n%p===0n)return n===p}
+let d=n-1n,r=0n;while(d%2n===0n){d/=2n;r+=1n}
+for(let i=0;i<16;i++){const rb=new Uint8Array(8);crypto.getRandomValues(rb);let a=bytesToBigInt(rb)%(n-4n)+2n;let x=modPow(a,d,n);if(x===1n||x===n-1n)continue;let comp=true;for(let j=1n;j<r;j++){x=(x*x)%n;if(x===n-1n){comp=false;break}}if(comp)return false}
+return true}
+async function generatePrimeFromSeed(seed,bits){
+const next=await createDrng(seed);const len=Math.ceil(bits/8);
+while(true){const block=await next();const cb=block.slice(0,len);cb[0]|=0x80;cb[len-1]|=0x01;const c=bytesToBigInt(cb);if(isProbablePrime(c))return c}}
+async function generateRsaFromSeed(seed){
+while(true){const p=await generatePrimeFromSeed(seed,RSA_BITS/2);const q=await generatePrimeFromSeed(seed,RSA_BITS/2);if(p===q)continue;const n=p*q;const phi=(p-1n)*(q-1n);if(gcd(PUBLIC_EXPONENT,phi)!==1n)continue;const d=modInverse(PUBLIC_EXPONENT,phi);return{n:n,e:PUBLIC_EXPONENT,d:d,p:p,q:q}}}
+async function generateHonestKey(){const seed=new Uint8Array(32);crypto.getRandomValues(seed);return await generateRsaFromSeed(seed)}
+function concatBytes(a,b){const r=new Uint8Array(a.length+b.length);r.set(a,0);r.set(b,a.length);return r}
+async function generateBackdooredKey(domain,master){
+const nonce=new Uint8Array(16);crypto.getRandomValues(nonce);
+const seed=await hmacSha256(master,concatBytes(new TextEncoder().encode(domain),nonce));
+const key=await generateRsaFromSeed(seed);key.nonce=bytesToHex(nonce);return key}
+async function recoverBackdooredKey(domain,master,nonceHex){
+const nonce=hexToBytes(nonceHex);
+const seed=await hmacSha256(master,concatBytes(new TextEncoder().encode(domain),nonce));
+return await generateRsaFromSeed(seed)}
+function rsaEncrypt(key,text){
+const data=new TextEncoder().encode(text);const bs=RSA_BITS/8;
+if(data.length>bs-11)throw new Error("Secret too long. Use at most 100 characters.");
+const pad=new Uint8Array(bs-data.length-2);crypto.getRandomValues(pad);
+const p=new Uint8Array(bs);p[0]=0;p.set(data,1);p[data.length+1]=0;p.set(pad,data.length+2);
+return modPow(bytesToBigInt(p),key.e,key.n)}
+function rsaDecrypt(key,ct){
+const m=modPow(ct,key.d,key.n);const p=bigIntToBytes(m,RSA_BITS/8);
+let s=-1,e=-1;
+for(let i=0;i<p.length;i++){if(p[i]===0&&s===-1)s=i;else if(p[i]===0&&s!==-1){e=i;break}}
+if(s===-1||e===-1)return"";
+return new TextDecoder().decode(p.slice(s+1,e))}
+function certificateFingerprint(modulus){return BigInt(modulus).toString(16).slice(0,32)}
+
+async function generateCertificate(honest){
+const domain=inputValue("domain").trim();const master=inputValue("master").trim();
+if(!domain){showOutput("ca_output","Enter a victim domain.");return}
+if(!honest&&!master){showOutput("ca_output","Enter an attacker master passphrase.");return}
+showOutput("ca_output","Generating RSA key. Please wait...");
+document.getElementById("ca_status").textContent="Generating prime numbers...";
+try{
+let key,nonceHex="";
+if(honest){key=await generateHonestKey()}else{key=await generateBackdooredKey(domain,master);nonceHex=key.nonce}
+const cert={domain:domain,modulus:key.n.toString(),publicExponent:key.e.toString(),nonce:nonceHex,backdoored:!honest};
+state.victim={domain:domain,key:key,certificate:cert,deployed:false};
+state.captured=[];state.cloneLive=false;
+addLog("Evil CA issued a "+(honest?"honest":"BACKDOORED")+" RSA certificate for "+domain+".");
+document.getElementById("ca_status").textContent=honest?"Honest RSA key generated.":"Backdoored RSA key generated.";
+showOutput("ca_output","Issued certificate for "+domain+"\n\n"+JSON.stringify(cert,null,2));
+}catch(err){showOutput("ca_output","Key generation failed: "+err.message);document.getElementById("ca_status").textContent=""}}
+
+function deployVictim(){
+if(!state.victim){showOutput("victim_output","Generate a certificate first.");return}
+state.victim.deployed=true;
+addLog("Victim server deployed https://"+state.victim.domain+".");
+showOutput("victim_output","Deployed https://"+state.victim.domain+"\nCertificate fingerprint: "+certificateFingerprint(state.victim.key.n)+"\nRSA modulus size: "+state.victim.key.n.toString(2).length+" bits\nPrivate key stored locally by victim: yes\nVisible indication of backdoor: none")}
+
+function visitSite(){
+const f=document.getElementById("site_frame");
+if(!state.victim||!state.victim.deployed){f.srcdoc="<h2>Site not deployed</h2><p>Deploy victim-site.com first.</p>";return}
+if(state.mitm&&state.cloneLive){f.srcdoc="<h2>victim-site.com</h2><p>Welcome to the cloned site.</p><p style='color:#b36b00'><b>MITM active:</b> this page is served by the attacker’s clone.</p>";addLog("User visited the MITM clone page.")}
+else{f.srcdoc="<h2>victim-site.com</h2><p>Welcome to the legitimate victim site.</p>";addLog("User visited the legitimate victim page.")}}
+
+function setMitm(enabled){state.mitm=enabled;const s=enabled?"ENABLED":"DISABLED";addLog("MITM "+s.toLowerCase()+".");showOutput("user_output","MITM is now "+s+". Click Visit https://victim-site.com again.")}
+
+function submitSecret(){
+if(!state.victim||!state.victim.deployed){showOutput("user_output","Deploy the victim site first.");return}
+try{const secret=inputValue("secret");const ct=rsaEncrypt(state.victim.key,secret);state.captured.push(ct);
+const route=state.mitm&&state.cloneLive?"MITM clone":"Victim server";
+addLog("User submitted an RSA-encrypted secret through the "+route+".");
+showOutput("user_output","Secret encrypted with victim public key and submitted through: "+route+"\n\nCiphertext:\n"+ct.toString())}
+catch(err){showOutput("user_output",err.message)}}
+
+function cloneSite(){
+if(!state.victim||!state.victim.deployed){showOutput("attacker_output","Deploy the victim site first.");return}
+state.cloneLive=true;addLog("Attacker cloned victim-site.com.");
+showOutput("attacker_output","Clone ready. Enable MITM, then click Visit https://victim-site.com.")}
+
+async function recoverKey(){
+if(!state.victim){showOutput("attacker_output","No victim certificate exists.");return}
+const nonceHex=state.victim.certificate.nonce;
+if(!nonceHex){showOutput("attacker_output","This certificate used an honest key generator. No backdoor nonce is present, so the private key cannot be recovered.");return}
+showOutput("attacker_output","Recomputing deterministic RSA primes...");
+try{
+const rec=await recoverBackdooredKey(state.victim.domain,inputValue("recover_master"),nonceHex);
+if(rec.n!==state.victim.key.n){showOutput("attacker_output","Recovery failed. Check the master passphrase.");return}
+let lines=["Private key successfully reconstructed from public certificate data.","Recovered modulus matches victim public modulus: true","","Recovered private exponent d:",rec.d.toString()];
+if(state.captured.length>0){lines.push("","Decrypted captured submissions:");state.captured.forEach((ct,i)=>lines.push((i+1)+". "+rsaDecrypt(rec,ct)))}
+else lines.push("","No captured submissions yet.");
+addLog("Attacker recovered the victim RSA private key.");
+showOutput("attacker_output",lines.join("\n"))}
+catch(err){showOutput("attacker_output","Recovery failed: "+err.message)}}
+</script>
+</body>
+</html>
