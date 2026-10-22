@@ -41,7 +41,7 @@ This project was developed as an interactive seminar demonstration for doctoral 
 | **Doctoral Research Area** | Quantum Internet and Complexity Theory |
 | **Course Code & Name** | **CBM522** — Information Security and Applied Cryptography |
 | **Course Instructor / Professor** | **Dr. Manjith B.C.** |
-| **Semester** | Semester II (SEM II) |
+| **Semester** | Semester II |
 | **Coursework Credits** | **3 Credits** (Counts toward the mandatory 12-credit Ph.D. coursework requirement) |
 | **Deliverable Type** | Coursework Seminar & Interactive Cryptographic Cyber-Range Demo |
 | **Submitted By** | **Subhash Kumar (2026PHD16006)** |
