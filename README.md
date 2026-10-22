@@ -4,7 +4,10 @@
 ![Zero Dependencies](https://img.shields.io/badge/Dependencies-Zero%20(Stdlib%20Only)-10b981)
 ![Netlify Ready](https://img.shields.io/badge/Netlify-Static%20Bundle%20Generator-00C7B7?logo=netlify&logoColor=white)
 ![Cryptography](https://img.shields.io/badge/RSA-1024--bit%20SETUP%20Backdoor-ef4444)
+![IIIT Kottayam](https://img.shields.io/badge/IIIT%20Kottayam-CBM522%20PhD%20Seminar-2563eb)
 ![License](https://img.shields.io/badge/Purpose-Educational%20Simulation-f59e0b)
+
+> 🎓 **Doctoral Seminar Project — IIIT Kottayam:** This project is part of the seminar for my Ph.D. coursework in **Computer Science & Engineering (Cyber Security)** at the **Indian Institute of Information Technology Kottayam (IIIT Kottayam)** for the course **CBM522: Information Security and Applied Cryptography (SEM II)**, instructed by **Dr. Manjith B.C.** (Course Instructor / Professor, CBM522) — a 3-credit course counting toward the 12-credit coursework requirement for my Ph.D. in **Quantum Internet and Complexity Theory**.
 
 An interactive cybersecurity and cryptography demonstration of a **Kleptographic SETUP (Secretly Embedded Trapdoor with Universal Protection)** attack against RSA key generation and TLS/PKI infrastructure.
 
@@ -14,15 +17,33 @@ Built with a **Dual-Engine Architecture**, this single Python script runs a loca
 
 ## Table of Contents
 
-1. [Overview & Threat Model](#overview--threat-model)
-2. [Key Features](#key-features)
-3. [Cryptographic Architecture (How It Works)](#cryptographic-architecture-how-it-works)
-4. [Repository Structure](#repository-structure)
-5. [Quick Start: Run Locally via CMD / Terminal](#quick-start-run-locally-via-cmd--terminal)
-6. [Deploy to Netlify](#deploy-to-netlify)
-7. [Step-by-Step Interactive Demo Walkthrough](#step-by-step-interactive-demo-walkthrough)
-8. [Defense & Real-World PKI Mitigations](#defense--real-world-pki-mitigations)
-9. [Security Notice](#security-notice)
+1. [Academic & Coursework Context](#academic--coursework-context)
+2. [Overview & Threat Model](#overview--threat-model)
+3. [Key Features](#key-features)
+4. [Cryptographic Architecture (How It Works)](#cryptographic-architecture-how-it-works)
+5. [Repository Structure](#repository-structure)
+6. [Quick Start: Run Locally via CMD / Terminal](#quick-start-run-locally-via-cmd--terminal)
+7. [Deploy to Netlify](#deploy-to-netlify)
+8. [Step-by-Step Interactive Demo Walkthrough](#step-by-step-interactive-demo-walkthrough)
+9. [Defense & Real-World PKI Mitigations](#defense--real-world-pki-mitigations)
+10. [Security Notice](#security-notice)
+
+---
+
+## Academic & Coursework Context
+
+This project was developed as an interactive seminar demonstration for doctoral coursework at the **Indian Institute of Information Technology Kottayam (IIIT Kottayam)**, under the instruction of **Dr. Manjith B.C.**, Course Instructor for **CBM522**.
+
+| Attribute | Details |
+| :--- | :--- |
+| **Institution** | Indian Institute of Information Technology Kottayam (IIIT Kottayam) |
+| **Programme** | Ph.D. in Computer Science & Engineering (CSE — Cyber Security) |
+| **Doctoral Research Area** | Quantum Internet and Complexity Theory |
+| **Course Code & Name** | **CBM522** — Information Security and Applied Cryptography |
+| **Course Instructor / Professor** | **Dr. Manjith B.C.** |
+| **Semester** | Semester II (SEM II) |
+| **Coursework Credits** | **3 Credits** (Counts toward the mandatory 12-credit Ph.D. coursework requirement) |
+| **Deliverable Type** | Coursework Seminar & Interactive Cryptographic Cyber-Range Demo |
 
 ---
 
@@ -32,22 +53,22 @@ In standard Public Key Infrastructure (PKI), if a Man-in-the-Middle (MITM) attac
 
 **Kleptography** (introduced by Adam Young and Moti Yung) changes this paradigm. If a Certificate Authority (CA), Hardware Security Module (HSM), or key-generation library is subverted, it can embed an **asymmetric cryptographic backdoor** inside newly generated keys:
 
-* **Indistinguishable Output:** The generated $1024$-bit RSA public modulus $N = p \times q$ passes standard OpenSSL structure checks and Shannon entropy randomness tests.
-* **No Browser Warnings During MITM:** The victim server deploys the genuine, CA-signed X.509 certificate. An attacker intercepting traffic presents this *exact same* valid certificate, keeping the browser's TLS padlock green and verified.
-* **Exclusive Key Recovery:** By extracting a public nonce embedded in an X.509 certificate extension and combining it with the attacker's secret master passphrase, the attacker deterministically reconstructs the victim's private primes $p$ and $q$ and private exponent $d$ in milliseconds—without factoring $N$.
+- **Indistinguishable Output:** The generated $1024$-bit RSA public modulus $N = p \times q$ passes standard OpenSSL structure checks and Shannon entropy randomness tests.
+- **No Browser Warnings During MITM:** The victim server deploys the genuine, CA-signed X.509 certificate. An attacker intercepting traffic presents this *exact same* valid certificate, keeping the browser's TLS padlock green and verified.
+- **Exclusive Key Recovery:** By extracting a public nonce embedded in an X.509 certificate extension and combining it with the attacker's secret master passphrase, the attacker deterministically reconstructs the victim's private primes $p$ and $q$ and private exponent $d$ in milliseconds—without factoring $N$.
 
 ---
 
 ## Key Features
 
-* **Dual-Engine Execution:**
+- **Dual-Engine Execution:**
   * **Local Python Engine (`127.0.0.1:8000`):** Executes all cryptographic operations in Python using only the standard library (`hashlib`, `hmac`, `secrets`, `http.server`).
   * **Browser Web Engine (Netlify Static Mode):** Automatically falls back to a pure JavaScript `BigInt` implementation of SHA-256, HMAC-SHA256, DRNG, and 24-round Miller-Rabin primality testing when hosted statically on Netlify.
-* **Live 4-Node Network Topology HUD:** Real-time visual status tracking across the Root CA, Victim Production Host, BGP/ARP Network Routing Path, and Kleptographic Attacker Node.
-* **X.509 v3 Certificate & PEM Inspector:** Generates realistic PEM blocks (`-----BEGIN CERTIFICATE-----`), ASN.1 metadata, SHA-256 thumbprints, Shannon entropy scores, and custom X.509 extension OIDs (`1.3.6.1.4.1.44924.1.9`).
-* **Simulated Client Browser & Banking Portal:** Features an interactive HTTPS URL bar, clickable TLS certificate padlock inspector, and an online treasury portal (*ApexVault*) for encrypting and transmitting secrets.
-* **MITM Packet Sniffer & Cryptanalysis Console:** Captures encrypted `TLS_RSA_WITH_AES_256_GCM_SHA384` records and displays the step-by-step mathematical reconstruction of $p, q, \phi(N),$ and $d$.
-* **SIEM Audit Telemetry:** Millisecond-timestamped syslog console tracking every key generation, deployment, routing hijack, and decryption event.
+- **Live 4-Node Network Topology HUD:** Real-time visual status tracking across the Root CA, Victim Production Host, BGP/ARP Network Routing Path, and Kleptographic Attacker Node.
+- **X.509 v3 Certificate & PEM Inspector:** Generates realistic PEM blocks (`-----BEGIN CERTIFICATE-----`), ASN.1 metadata, SHA-256 thumbprints, Shannon entropy scores, and custom X.509 extension OIDs (`1.3.6.1.4.1.44924.1.9`).
+- **Simulated Client Browser & Banking Portal:** Features an interactive HTTPS URL bar, clickable TLS certificate padlock inspector, and an online treasury portal (*ApexVault*) for encrypting and transmitting secrets.
+- **MITM Packet Sniffer & Cryptanalysis Console:** Captures encrypted `TLS_RSA_WITH_AES_256_GCM_SHA384` records and displays the step-by-step mathematical reconstruction of $p, q, \phi(N),$ and $d$.
+- **SIEM Audit Telemetry:** Millisecond-timestamped syslog console tracking every key generation, deployment, routing hijack, and decryption event.
 
 ---
 
@@ -100,7 +121,7 @@ $$m \equiv c^d \pmod{N}$$
 ## Quick Start: Run Locally via CMD / Terminal
 
 ### Prerequisites
-* **Python $3.8$ or higher** (No external `pip` packages required; uses $100\%$ Python standard library).
+- **Python $3.8$ or higher** (No external `pip` packages required; uses $100\%$ Python standard library).
 
 ### Step 1: Clone the Repository
 ```cmd
@@ -151,7 +172,7 @@ npx netlify-cli deploy --prod --dir=netlify_deploy
 
 ## Step-by-Step Interactive Demo Walkthrough
 
-Follow this 5-step flow during live demonstrations to showcase the full lifecycle of a kleptographic attack:
+Follow this 6-step flow during live demonstrations to showcase the full lifecycle of a kleptographic attack:
 
 | Step | Tab | Action | What to Observe |
 | :--- | :--- | :--- | :--- |
@@ -176,4 +197,4 @@ How do modern cryptographic systems protect against Kleptographic SETUP attacks?
 
 ## Security Notice
 
-> **Educational & Academic Use Only:** This project is a self-contained local and browser-based mathematical simulation designed for university cryptography courses, security demonstrations, and awareness training. It performs no real network ARP spoofing, BGP hijacking, or interception of external systems.
+> **Educational & Academic Use Only:** This project is a self-contained local and browser-based mathematical simulation developed for **CBM522: Information Security and Applied Cryptography** at **IIIT Kottayam**, under the instruction of **Dr. Manjith B.C.** It performs no real network ARP spoofing, BGP hijacking, or interception of external systems.
