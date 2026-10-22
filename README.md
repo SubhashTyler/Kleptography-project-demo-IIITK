@@ -40,7 +40,7 @@ This project was developed as an interactive seminar demonstration for doctoral 
 | **Programme** | Ph.D. in Computer Science & Engineering (CSE — Cyber Security) |
 | **Doctoral Research Area** | Quantum Internet and Complexity Theory |
 | **Course Code & Name** | **CBM522** — Information Security and Applied Cryptography |
-| **Course Instructor / Professor** | **Dr. Manjith B.C.** |
+| **Course Instructor** | **Dr. Manjith B.C.** |
 | **Semester** | Semester II |
 | **Coursework Credits** | **3 Credits** (Counts toward the mandatory 12-credit Ph.D. coursework requirement) |
 | **Deliverable Type** | Coursework Seminar & Interactive Cryptographic Cyber-Range Demo |
