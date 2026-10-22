@@ -44,6 +44,7 @@ This project was developed as an interactive seminar demonstration for doctoral 
 | **Semester** | Semester II (SEM II) |
 | **Coursework Credits** | **3 Credits** (Counts toward the mandatory 12-credit Ph.D. coursework requirement) |
 | **Deliverable Type** | Coursework Seminar & Interactive Cryptographic Cyber-Range Demo |
+| **Submitted By** | **Subhash Kumar (1032230627)** |
 
 ---
 
